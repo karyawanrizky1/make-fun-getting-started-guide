@@ -1,0 +1,33 @@
+name: Validate guide
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  guide-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required files exist
+        run: |
+          test -f README.md || { echo "README.md missing"; exit 1; }
+          test -f LICENSE || { echo "LICENSE missing"; exit 1; }
+          test ! -f .github/README.md || { echo ".github/README.md would shadow the root README on GitHub"; exit 1; }
+
+      - name: README must carry the entrant referral and badges
+        run: |
+          grep -Fq "vbbfxq02" README.md || { echo "referral code vbbfxq02 not found in README.md"; exit 1; }
+          grep -Fq "https://make.fun/r/vbbfxq02" README.md || { echo "referral link not found in README.md"; exit 1; }
+          grep -c "make.fun/badge/bring-the-humans-02" README.md | grep -q "^3$" || { echo "expected 3 make.fun badge lines in README.md"; exit 1; }
+          test "$(wc -c < README.md)" -le 2097152 || { echo "README.md exceeds 2 MB (AD_PAGE_MAX_BYTES)"; exit 1; }
+
+      - name: Screenshot check (required by bring-the-humans-02)
+        continue-on-error: true
+        run: |
+          test -f screenshot.png || { echo "screenshot.png missing — add a screenshot of the rendered repo page before submitting to make.fun"; exit 1; }
+          test "$(wc -c < screenshot.png)" -le 8388608 || { echo "screenshot.png exceeds 8 MB (AD_IMAGE_MAX_BYTES)"; exit 1; }
+          file screenshot.png | grep -qiE "PNG|JPEG|WebP" || { echo "screenshot.png is not PNG/JPEG/WebP"; exit 1; }
